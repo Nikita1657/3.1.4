@@ -1,44 +1,46 @@
 package ru.kata.spring.boot_security.demo.entities;
 
 import jakarta.persistence.*;
-import jakarta.validation.constraints.Email;
-import jakarta.validation.constraints.NotEmpty;
-import jakarta.validation.constraints.Size;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
+
 import java.util.Collection;
 import java.util.HashSet;
+import java.util.Objects;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 @Entity
 @Table(name = "users")
 public class User implements UserDetails {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @NotEmpty(message = "Username should not be empty")
-    @Size(min = 2, max = 30, message = "Username should be between 2 and 30 characters")
-    @Column(unique = true)
-    private String username;
+    @Column(nullable = false)
+    private String firstName; // Новое поле для First Name
 
-    @NotEmpty(message = "Password should not be empty")
+    @Column(nullable = false)
+    private String lastName; // Новое поле для Last Name
+
+    @Column(unique = true, nullable = false)
+    private String email; // поля аунтификации емаила
+
+    @Column(nullable = false)
     private String password;
 
-    @NotEmpty(message = "Email should not be empty")
-    @Email(message = "Email should be valid")
-    @Column(unique = true)
-    private String email;
-
     @ManyToMany(fetch = FetchType.EAGER)
-    @JoinTable(name = "users_roles",
+    @JoinTable(
+            name = "users_roles",
             joinColumns = @JoinColumn(name = "user_id"),
-            inverseJoinColumns = @JoinColumn(name = "role_id"))
-    private Set<Role> roles;
+            inverseJoinColumns = @JoinColumn(name = "role_id")
+    )
+    private Set<Role> roles = new HashSet<>();
+
+    @Transient
+    private Set<Long> roleIds = new HashSet<>();
 
     public User() {
-        // TODO document why this constructor is empty
     }
 
     public Long getId() {
@@ -49,30 +51,36 @@ public class User implements UserDetails {
         this.id = id;
     }
 
-    @Override
-    public String getUsername() {
-        return username;
+    public String getFirstName() {
+        return firstName;
     }
 
-    public void setUsername(String username) {
-        this.username = username;
+    public void setFirstName(String firstName) {
+        this.firstName = firstName;
     }
 
-    @Override
+    public String getLastName() {
+        return lastName;
+    }
+
+    public void setLastName(String lastName) {
+        this.lastName = lastName;
+    }
+
+    public String getEmail() {
+        return email; // новое поле
+    }
+
+    public void setEmail(String email) {
+        this.email = email; // новое поле
+    }
+
     public String getPassword() {
         return password;
     }
 
     public void setPassword(String password) {
         this.password = password;
-    }
-
-    public String getEmail() {
-        return email;
-    }
-
-    public void setEmail(String email) {
-        this.email = email;
     }
 
     public Set<Role> getRoles() {
@@ -83,9 +91,22 @@ public class User implements UserDetails {
         this.roles = roles;
     }
 
+    public Set<Long> getRoleIds() {
+        return roleIds;
+    }
+
+    public void setRoleIds(Set<Long> roleIds) {
+        this.roleIds = roleIds;
+    }
+
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
         return getRoles();
+    }
+
+    @Override
+    public String getUsername() {
+        return email; // Используем email как username
     }
 
     @Override
@@ -108,23 +129,44 @@ public class User implements UserDetails {
         return true;
     }
 
-    @Transient
-    private Set<Long> roleIds = new HashSet<>();
-
-    public Set<Long> getRoleIds() {
-        return roleIds;
-    }
-
-    public void setRoleIds(Set<Long> roleIds) {
-        this.roleIds = roleIds;
-    }
-
     @PostLoad
     private void postLoad() {
         if (roles != null) {
             roleIds = roles.stream()
                     .map(Role::getId)
-                    .collect(Collectors.toSet());
+                    .collect(java.util.stream.Collectors.toSet());
         }
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        User user = (User) o;
+        return Objects.equals(id, user.id) &&
+                Objects.equals(firstName, user.firstName) &&
+                Objects.equals(lastName, user.lastName) &&
+                Objects.equals(email, user.email) &&
+                Objects.equals(password, user.password) &&
+                Objects.equals(roles, user.roles) &&
+                Objects.equals(roleIds, user.roleIds);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(id, firstName, lastName, email, password, roles, roleIds);
+    }
+
+    @Override
+    public String toString() {  // новое поле вывод информации при добавлении в бд
+        return "User{" +
+                "id=" + id +
+                ", firstName='" + firstName + '\'' +
+                ", lastName='" + lastName + '\'' +
+                ", email='" + email + '\'' +
+                ", password='" + password + '\'' +
+                ", roles=" + roles +
+                ", roleIds=" + roleIds +
+                '}';
     }
 }

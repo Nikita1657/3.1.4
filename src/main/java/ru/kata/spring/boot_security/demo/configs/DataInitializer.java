@@ -1,5 +1,7 @@
 package ru.kata.spring.boot_security.demo.configs;
 
+import jakarta.annotation.PostConstruct;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
@@ -7,18 +9,19 @@ import ru.kata.spring.boot_security.demo.entities.Role;
 import ru.kata.spring.boot_security.demo.entities.User;
 import ru.kata.spring.boot_security.demo.services.RoleService;
 import ru.kata.spring.boot_security.demo.services.UserService;
-import jakarta.annotation.PostConstruct;
+
+
 import java.util.Set;
 
 @Component
 public class DataInitializer {
+
     private final UserService userService;
     private final RoleService roleService;
     private final PasswordEncoder passwordEncoder;
 
-    public DataInitializer(UserService userService,
-                           RoleService roleService,
-                           PasswordEncoder passwordEncoder) {
+    @Autowired
+    public DataInitializer(UserService userService, RoleService roleService, PasswordEncoder passwordEncoder) {
         this.userService = userService;
         this.roleService = roleService;
         this.passwordEncoder = passwordEncoder;
@@ -42,11 +45,12 @@ public class DataInitializer {
     }
 
     private void createAdmin() {
-        if (userService.findByUsername("admin") == null) {
+        if (userService.findByEmail("admin@example.com") == null) {
             User admin = new User();
-            admin.setUsername("admin");
-            admin.setPassword(passwordEncoder.encode("admin"));
-            admin.setEmail("admin@example.com");
+            admin.setFirstName("admin");
+            admin.setLastName("admin");  // добавил новые поля как в задании
+            admin.setEmail("admin@example.com"); // поменял аунтификацию на емаил
+            admin.setPassword("admin"); // Оригинальный пароль
             admin.setRoles(Set.of(
                     roleService.findByName("ROLE_ADMIN"),
                     roleService.findByName("ROLE_USER")
@@ -56,11 +60,12 @@ public class DataInitializer {
     }
 
     private void createUser() {
-        if (userService.findByUsername("user") == null) {
+        if (userService.findByEmail("user@example.com") == null) {
             User user = new User();
-            user.setUsername("user");
-            user.setPassword(passwordEncoder.encode("user"));
-            user.setEmail("user@example.com");
+            user.setFirstName("user");
+            user.setLastName("user");// добавил новые поля как в задании
+            user.setEmail("user@example.com");// поменял аунтификацию на емаил
+            user.setPassword("user"); // Оригинальный пароль
             user.setRoles(Set.of(
                     roleService.findByName("ROLE_USER")
             ));
