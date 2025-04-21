@@ -9,6 +9,7 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
+import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
 import org.springframework.web.filter.HiddenHttpMethodFilter;
 
 @Configuration
@@ -21,6 +22,7 @@ public class WebSecurityConfig {
     public WebSecurityConfig(AuthenticationSuccessHandler successUserHandler) {
         this.successUserHandler = successUserHandler;
     }
+
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
@@ -28,6 +30,7 @@ public class WebSecurityConfig {
                         .requestMatchers("/", "/login", "/error", "/logout", "/logout-success").permitAll()
                         .requestMatchers("/user/**").hasAnyRole("USER", "ADMIN")
                         .requestMatchers("/admin/**").hasRole("ADMIN")
+                        .requestMatchers("/api/users/current").hasAnyRole("ADMIN", "USER")
                         .anyRequest().authenticated()
                 )
                 .formLogin(form -> form
@@ -45,8 +48,10 @@ public class WebSecurityConfig {
                         .deleteCookies("JSESSIONID")
                         .permitAll()
                 )
+                .csrf(csrf -> csrf
+                        .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse()) // Включаем CSRF и используем Cookie для хранения токена
+                );
 
-            ; // Отключаем CSRF для примера, рекомендуется оставить включенным
         return http.build();
     }
 

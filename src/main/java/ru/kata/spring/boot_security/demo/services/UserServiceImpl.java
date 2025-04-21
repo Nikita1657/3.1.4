@@ -1,5 +1,6 @@
 package ru.kata.spring.boot_security.demo.services;
 
+import io.micrometer.common.util.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
@@ -9,6 +10,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import ru.kata.spring.boot_security.demo.entities.Role;
 import ru.kata.spring.boot_security.demo.entities.User;
+import ru.kata.spring.boot_security.demo.repositories.RoleRepository;
 import ru.kata.spring.boot_security.demo.repositories.UserRepository;
 
 import java.util.HashSet;
@@ -19,12 +21,14 @@ import java.util.Set;
 public class UserServiceImpl implements UserService, UserDetailsService {
 
     private final UserRepository userRepository;
+    private final RoleRepository roleRepository; // Добавлен RoleRepository
     private final RoleService roleService;
     private final PasswordEncoder passwordEncoder;
 
     @Autowired
-    public UserServiceImpl(UserRepository userRepository, RoleService roleService, PasswordEncoder passwordEncoder) {
+    public UserServiceImpl(UserRepository userRepository, RoleRepository roleRepository, RoleService roleService, PasswordEncoder passwordEncoder) {
         this.userRepository = userRepository;
+        this.roleRepository = roleRepository; // Инициализация RoleRepository
         this.roleService = roleService;
         this.passwordEncoder = passwordEncoder;
     }
@@ -36,7 +40,7 @@ public class UserServiceImpl implements UserService, UserDetailsService {
         if (user == null) {
             throw new UsernameNotFoundException("User not found");
         }
-        return user;
+        return user; // User должен реализовывать UserDetails
     }
 
     @Override
@@ -52,12 +56,16 @@ public class UserServiceImpl implements UserService, UserDetailsService {
 
     @Override
     @Transactional
-    public void saveUser(User user) {
-        String plainPassword = user.getPassword();
-        String encodedPassword = passwordEncoder.encode(plainPassword);
-        user.setPassword(encodedPassword);
-        userRepository.save(user);
-        printUserDetails(user, plainPassword, encodedPassword);
+    public User saveUser(User user) {
+        // Кодируем пароль перед сохранением
+        if (!StringUtils.isEmpty(user.getPassword())) {
+            user.setPassword(passwordEncoder.encode(user.getPassword()));
+        }
+        // Убедимся, что роли установлены
+        if (user.getRoles() == null || user.getRoles().isEmpty()) {
+            user.setRoles(new HashSet<>());
+        }
+        return userRepository.save(user);
     }
 
     @Override
@@ -88,6 +96,11 @@ public class UserServiceImpl implements UserService, UserDetailsService {
     @Override
     public User findByEmail(String email) {
         return userRepository.findByEmail(email);
+    }
+
+    @Override
+    public List<Role> getAllRolesForUser() {
+        return roleRepository.findAll();
     }
 
     // Метод для вывода имени и пароля в консоль

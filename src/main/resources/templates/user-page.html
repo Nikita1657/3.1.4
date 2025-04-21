@@ -6,6 +6,124 @@
     <!-- Bootstrap CSS -->
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css"
           integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
+    <!-- jQuery -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <!-- Bootstrap JS -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js"></script>
+    <script>
+        // Функция для получения CSRF токена
+        function getCsrfToken() {
+            return $('meta[name="_csrf"]').attr('content');
+        }
+
+        // Функция для получения имени CSRF заголовка
+        function getCsrfHeader() {
+            return $('meta[name="_csrf_header"]').attr('content');
+        }
+
+        // Функция для загрузки текущего пользователя
+        function loadCurrentUser() {
+            fetch('/api/users/current')
+                .then(response => response.json())
+                .then(user => {
+                    const tbody = $('#user-table tbody');
+                    tbody.empty();
+                    const row = `
+                        <tr>
+                            <td>${user.id}</td>
+                            <td>${user.firstName}</td>
+                            <td>${user.lastName}</td>
+                            <td>${user.email}</td>
+                            <td>${user.roles.map(role => role.name.substring(5)).join(', ')}</td>
+                        </tr>
+                    `;
+                    tbody.append(row);
+                    // Заполнение модального окна (если нужно)
+                    $('#current-id').val(user.id);
+                    $('#current-firstName').val(user.firstName);
+                    $('#current-lastName').val(user.lastName);
+                    $('#current-email').val(user.email);
+                    $('#current-email').text(user.email);
+                    $('#current-roles-display').text(user.roles.map(role => role.name.substring(5)).join(', '));
+                    $('#current-roles').val(user.roles.map(role => role.id));
+                })
+                .catch(error => showAlert('Error loading current user: ' + error, 'danger'));
+        }
+
+        // Функция для загрузки всех ролей
+        function loadRoles() {
+            fetch('/api/users/roles')
+                .then(response => response.json())
+                .then(roles => {
+                    const roleSelect = $('#current-roles');
+                    roleSelect.empty();
+                    roles.forEach(role => {
+                        const option = `<option value="${role.id}">${role.name.substring(5)}</option>`;
+                        roleSelect.append(option);
+                    });
+                })
+                .catch(error => console.error('Error loading roles:', error));
+        }
+
+        // Функция для обновления текущего пользователя
+        function updateCurrentUser() {
+            const userId = $('#current-id').val();
+            const user = {
+                id: userId,
+                firstName: $('#current-firstName').val(),
+                lastName: $('#current-lastName').val(),
+                email: $('#current-email').val(),
+                password: $('#current-password').val(),
+                roleIds: $('#current-roles').val()
+            };
+            fetch(`/api/users/${userId}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    [getCsrfHeader()]: getCsrfToken()
+                },
+                body: JSON.stringify(user)
+            })
+                .then(response => {
+                    if (response.ok) {
+                        $('#editModal').modal('hide');
+                        showAlert('User updated successfully!', 'success');
+                        loadCurrentUser(); // Обновляем отображение текущего пользователя
+                    } else {
+                        response.text().then(text => showAlert(text, 'danger'));
+                    }
+                })
+                .catch(error => showAlert('Error updating current user: ' + error, 'danger'));
+        }
+
+        function showAlert(message, type) {
+            const alert = $(`
+                <div class="alert alert-${type} alert-dismissible fade show" role="alert">
+                    ${message}
+                    <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+            `);
+            $('#liveAlertPlaceholder').append(alert);
+            setTimeout(() => alert.remove(), 3000);
+        }
+
+        // Инициализация при загрузке
+        $(document).ready(function() {
+            loadCurrentUser();
+            loadRoles();
+            // Обработчики событий
+            $('#edit-btn').click(openEditModal);
+            $('#save-changes-btn').click(updateCurrentUser);
+        });
+
+        // Функция для открытия модального окна редактирования
+        function openEditModal() {
+            $('#editModal').modal('show');
+        }
+    </script>
     <style>
         .menu {
             background-color: white;
@@ -16,13 +134,11 @@
             z-index: 1000;
             top: 70px; /* Учитываем высоту navbar, чтобы поместить меню под ним */
         }
-
         .container-main {
             margin-left: 220px; /* Учитываем ширину меню */
             margin-right: 20px; /* Добавляем отступ справа */
             padding-top: 76px; /* Учитываем высоту навигационной панели и отступ для меню */
         }
-
         .menu-btn {
             background-color: transparent;
             border: none;
@@ -37,55 +153,36 @@
             padding-left: 20px; /* Отступ текста слева */
             border-radius: 4px 4px 4px 4px;
         }
-
         .menu-btn:hover {
             background-color: #057AFB; /* Цвет фона при наведении */
             color: white; /* Цвет текста при наведении */
         }
-
         .col-constructor-name {
             font-size: 16px;
         }
-
         .table-container {
-            max-height: 1000px; /* Замените это значение на желаемую максимальную высоту */
-            overflow-y: auto; /* Добавляет вертикальную прокрутку, если контент превышает высоту */
+            max-height: 1000px;
+            overflow-y: auto;
         }
     </style>
 </head>
 <body style="background-color: #f8f9fa;">
 <nav class="navbar navbar-dark bg-dark fixed-top">
     <a class="navbar-brand ml-5" style="color: white; font-family: 'Roboto', sans-serif; font-size: 20px;">
-        <span sec:authentication="principal.email" style="font-weight: bold;font-size: 18px"></span> with roles:
-        <span sec:authorize="hasRole('ADMIN')">
-            <span sec:authorize="hasRole('USER')" style="font-weight: lighter">ADMIN USER</span>
-            <span sec:authorize="!hasRole('USER')">ADMIN</span>
-        </span>
-        <span sec:authorize="!hasRole('ADMIN')">
-            <span sec:authorize="hasRole('USER')">USER</span>
-        </span>
+        <span id="current-email" style="font-weight: bold;font-size: 18px"></span> with roles:
+        <span id="current-roles-display" style="font-weight: lighter"></span>
     </a>
     <form th:action="@{/logout}" th:method="POST" class="d-inline">
         <button class="btn btn-link text-secondary font-size-20" type="submit">Logout</button>
     </form>
 </nav>
-
 <div class="menu">
-    <th:block sec:authorize="hasRole('ROLE_ADMIN')">
-        <a th:href="@{'/admin'}">
-            <button class="menu-btn">
-                Admin
-            </button>
-        </a>
-    </th:block>
-
     <th:block sec:authorize="hasRole('ROLE_USER')">
         <button class="menu-btn" style="background-color: #057AFB; color: white;">
             User
         </button>
     </th:block>
 </div>
-
 <div class="container-main">
     <div>
         <h1>User Information Page</h1>
@@ -95,8 +192,7 @@
                 <h4>About User</h4>
             </div>
             <div class="table-container" style="border: 1px solid #ccc; background-color: #fff; padding: 15px;">
-                <table class="table table-hover table-striped"
-                       style="background-color: white; width: 100%; font-size: 14px;">
+                <table class="table table-hover table-striped" id="user-table" style="background-color: white; width: 100%; font-size: 14px;">
                     <thead>
                     <tr>
                         <th class="col-constructor-name">ID</th>
@@ -107,52 +203,61 @@
                     </tr>
                     </thead>
                     <tbody>
-                    <tr>
-                        <td th:text="${user.id}"></td>
-                        <td th:text="${user.firstName}"></td>
-                        <td th:text="${user.lastName}"></td>
-                        <td th:text="${user.email}"></td>
-                        <td>
-                            <span th:each="role, iterStat : ${user.roles}">
-                                <span th:text="${role.name.substring(5)}"></span>
-                                <span th:if="${!iterStat.last}">, </span>
-                            </span>
-                        </td>
-                    </tr>
+                    <!-- Данные будут загружены через JavaScript -->
                     </tbody>
                 </table>
             </div>
         </div>
     </div>
 </div>
-
-<script src="https://code.jquery.com/jquery-3.3.1.slim.min.js"
-        integrity="sha384-q8i/X+965DzO0rT7abK41JStQIAqVgRVzpbzo5smXKp4YfRvH+8abtTE1Pi6jizo"
-        crossorigin="anonymous"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js"
-        integrity="sha384-UO2eT0CpHqdSJQ6hJty5KVphtPhzWj9WO1clHTMGa3JDZwrnQq4sF86dIHNDz0W1"
-        crossorigin="anonymous"></script>
-<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js"
-        integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM"
-        crossorigin="anonymous"></script>
-<script>
-    jQuery(document).ready(function () {
-        // Показываем тост с задержкой 3000 мс (3 секунды)
-        jQuery('.toast').toast({delay: 3000}).toast('show');
-        // Создаем предупреждающее сообщение
-        const alertPlaceholder = jQuery('#liveAlertPlaceholder');
-        const alertTrigger = jQuery('#liveAlertBtn');
-        function alert(message, type) {
-            const wrapper = jQuery('<div class="alert alert-' + type + ' alert-dismissible" role="alert">' + message + '<button type="button" class="close" data-dismiss="alert" aria-label="Close"></button></div>');
-            alertPlaceholder.append(wrapper);
-        }
-        if (alertTrigger) {
-            alertTrigger.on('click', function () {
-                // Показываем предупреждающее сообщение
-                alert('Отлично, вы запустили это предупреждающее сообщение!', 'success');
-            });
-        }
-    });
-</script>
+<!-- Modal для редактирования пользователя -->
+<div class="modal fade" id="editModal" tabindex="-1" role="dialog">
+    <div class="modal-dialog modal-md" role="document">
+        <div class="modal-content">
+            <div class="modal-header d-flex justify-content-between">
+                <h4 class="modal-title">Edit User</h4>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form>
+                    <input type="hidden" id="current-id"/>
+                    <div class="form-group">
+                        <label for="current-firstName">First Name:</label>
+                        <input type="text" class="form-control" id="current-firstName" required/>
+                    </div>
+                    <div class="form-group">
+                        <label for="current-lastName">Last Name:</label>
+                        <input type="text" class="form-control" id="current-lastName" required/>
+                    </div>
+                    <div class="form-group">
+                        <label for="current-email">Email:</label>
+                        <input type="email" class="form-control" id="current-email" required/>
+                    </div>
+                    <div class="form-group">
+                        <label for="current-password">Password:</label>
+                        <input type="password" class="form-control" id="current-password"/>
+                    </div>
+                    <div class="form-group">
+                        <label for="current-roles">Roles:</label>
+                        <select class="form-control" id="current-roles" multiple="multiple" required>
+                            <!-- Роли будут загружены через JavaScript -->
+                        </select>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                        <button type="button" class="btn btn-info" onclick="updateCurrentUser()">Save Changes</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+<!-- Алерт для отображения сообщений -->
+<div id="liveAlertPlaceholder"></div>
+<!-- CSRF токен -->
+<meta th:name="_csrf" th:content="${_csrf.token}"/>
+<meta th:name="_csrf_header" th:content="${_csrf.headerName}"/>
 </body>
 </html>
