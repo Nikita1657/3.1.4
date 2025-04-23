@@ -2,6 +2,7 @@ package ru.kata.spring.boot_security.demo.rest;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import ru.kata.spring.boot_security.demo.entities.Role;
@@ -37,14 +38,5 @@ public class UserRestController {
         }
         return ResponseEntity.ok(roles);
     }
-
-    @PutMapping("/{id}")
-    public ResponseEntity<User> updateUser(@PathVariable Long id, @RequestBody User user) {
-        User existingUser = userService.getUserById(id);
-        if (existingUser == null) {
-            return ResponseEntity.notFound().build();
-        }
-        userService.updateUser(id, user);
-        return ResponseEntity.ok(user);
-    }
+    //убрал редактор пользователя
 }

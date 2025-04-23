@@ -2,6 +2,7 @@ package ru.kata.spring.boot_security.demo.controllers;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
@@ -27,6 +28,7 @@ public class AdminRestController {
     }
 
     @GetMapping("/users")
+    @PreAuthorize("hasRole('ROLE_ADMIN')")
     public ResponseEntity<List<User>> getAllUsers() {
         List<User> users = userService.getAllUsers();
         if (users == null || users.isEmpty()) {
@@ -36,6 +38,7 @@ public class AdminRestController {
     }
 
     @GetMapping("/roles")
+    @PreAuthorize("hasRole('ROLE_ADMIN')")
     public ResponseEntity<List<Role>> getAllRoles() {
         List<Role> roles = roleService.getAllRoles();
         if (roles == null || roles.isEmpty()) {
@@ -45,6 +48,7 @@ public class AdminRestController {
     }
 
     @GetMapping("/users/{id}")
+    @PreAuthorize("hasRole('ROLE_ADMIN')")
     public ResponseEntity<User> getUserById(@PathVariable Long id) {
         User user = userService.getUserById(id);
         if (user == null) {
@@ -54,6 +58,7 @@ public class AdminRestController {
     }
 
     @PostMapping("/users")
+    @PreAuthorize("hasRole('ROLE_ADMIN')")
     public ResponseEntity<User> addUser(@RequestBody User user) {
         // Устанавливаем роли перед сохранением пользователя
         if (user.getRoleIds() != null && !user.getRoleIds().isEmpty()) {
@@ -75,6 +80,7 @@ public class AdminRestController {
     }
 
     @DeleteMapping("/users/{id}")
+    @PreAuthorize("hasRole('ROLE_ADMIN')")
     public ResponseEntity<Void> deleteUser(@PathVariable Long id) {
         User user = userService.getUserById(id);
         if (user == null) {
