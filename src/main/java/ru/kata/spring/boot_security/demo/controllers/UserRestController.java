@@ -10,7 +10,7 @@ import ru.kata.spring.boot_security.demo.entities.User;
 import ru.kata.spring.boot_security.demo.services.UserService;
 
 import java.util.List;
-
+@PreAuthorize("hasRole('ROLE_ADMIN')") // исправил
 @RestController
 @RequestMapping("/api/users")
 public class UserRestController {
